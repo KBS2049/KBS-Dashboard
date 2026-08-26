@@ -31,7 +31,11 @@ export default async function handler(req, res) {
     if (ids2) {
       const vr = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids2}`, { headers: { Authorization: `Bearer ${token}` } });
       const vd = await vr.json();
-      videos = (vd.items || []).sort((a, b) => b.statistics.viewCount - a.statistics.viewCount);
+      // chronological order: newest first (matches upload order)
+      videos = (vd.items || []).sort((a, b) => new Date(b.snippet.publishedAt) - new Date(a.snippet.publishedAt));
+      // rank = position by views among this same set (1 = highest views)
+      const byViews = [...videos].sort((a, b) => b.statistics.viewCount - a.statistics.viewCount);
+      videos.forEach(v => { v.rankByViews = byViews.findIndex(x => x.id === v.id) + 1; });
     }
   } catch (e) {}
 
