@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<style>html{padding-top:env(safe-area-inset-top);}</style>
 <title>KBS Dashboard</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -25,7 +26,7 @@
   .pinBoxes input:focus{border-color:var(--accent); outline:none;}
   #pinError{color:#ff5252; font-size:13px; margin-top:16px; height:16px;}
 
-  header{display:flex; align-items:center; gap:10px; padding:16px; position:sticky; top:0; background:var(--bg); z-index:10; border-bottom:1px solid var(--border);}
+  header{display:flex; align-items:center; gap:10px; padding:16px; padding-top:calc(16px + env(safe-area-inset-top)); position:sticky; top:0; background:var(--bg); z-index:10; border-bottom:1px solid var(--border);}
   header img{width:30px; height:30px; border-radius:7px;}
   header h1{font-size:19px; margin:0; font-weight:700;}
   .backbtn{font-size:22px; background:none; border:none; color:var(--text); cursor:pointer; padding:0 6px;}
@@ -200,7 +201,7 @@ function renderDashboard(chan, d){
       <img src="${v.snippet.thumbnails.default.url}">
       <div class="info">
         <div class="title">${v.snippet.title}</div>
-        <div class="meta">${fmt(v.statistics.viewCount)} views &nbsp;·&nbsp; ${fmt(v.statistics.likeCount)} likes <span class="rank">#${i+1} of ${d.videos.length}</span></div>
+        <div class="meta">${fmt(v.statistics.viewCount)} views &nbsp;·&nbsp; ${fmt(v.statistics.likeCount)} likes <span class="rank">Rank #${v.rankByViews} of ${d.videos.length} by views</span></div>
       </div>`;
     row.onclick = ()=> openVideo(chan, v, d.videos);
     vl.appendChild(row);
@@ -215,13 +216,13 @@ async function openVideo(chan, video, allVideos){
 
   const q = new URLSearchParams({ channelId: chan.id, videoId: video.id, publishedAt: video.snippet.publishedAt });
   const vd = await (await fetch('/api/video?'+q)).json();
-  const rank = allVideos.findIndex(v=>v.id===video.id)+1;
+  const rank = video.rankByViews;
 
   main.innerHTML = `
     <div style="display:flex;gap:12px;margin-bottom:16px;">
       <img src="${video.snippet.thumbnails.medium.url}" style="width:100px;border-radius:8px;">
       <div><div style="font-weight:600;font-size:14px;">${video.snippet.title}</div>
-      <div class="note">Rank #${rank} of ${allVideos.length} by views</div></div>
+      <div class="note">Rank #${rank} of ${allVideos.length} recent videos, by views</div></div>
     </div>
     <div class="statline"><span class="k">Views</span><span class="v">${fmt(video.statistics.viewCount)}</span></div>
     <div class="statline"><span class="k">Likes</span><span class="v">${fmt(video.statistics.likeCount)}</span></div>
