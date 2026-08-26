@@ -2,6 +2,7 @@ import { kv } from '@vercel/kv';
 import { getAccessToken } from './_helpers.js';
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
   const { channelId } = req.query;
   const c = await kv.hgetall(`channel:${channelId}`);
   if (!c) { res.status(404).json({ error: 'not found' }); return; }
@@ -39,5 +40,5 @@ export default async function handler(req, res) {
     }
   } catch (e) {}
 
-  res.json({ title: c.title, thumb: c.thumb, subs: stats.subscriberCount, totalViews: stats.viewCount, analytics, videos });
+  res.json({ title: c.title, thumb: c.thumb, subs: stats.subscriberCount, totalViews: stats.viewCount, videoCount: stats.videoCount, analytics, videos, fetchedAt: Date.now() });
 }
