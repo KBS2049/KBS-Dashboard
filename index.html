@@ -30,6 +30,8 @@
   header img{width:30px; height:30px; border-radius:7px;}
   header h1{font-size:19px; margin:0; font-weight:700;}
   .backbtn{font-size:22px; background:none; border:none; color:var(--text); cursor:pointer; padding:0 6px;}
+  .refreshBtn{margin-left:auto; font-size:20px; background:none; border:none; color:var(--text); cursor:pointer; padding:4px 8px; line-height:1;}
+  .refreshBtn.spinning{animation:sp 0.7s linear infinite;}
 
   #channelScroller{display:flex; gap:14px; overflow-x:auto; padding:14px 16px; border-bottom:1px solid var(--border);}
   #channelScroller::-webkit-scrollbar{display:none;}
@@ -96,6 +98,7 @@
   <button class="backbtn hidden" id="backBtn" onclick="goHome()">←</button>
   <img src="icon.png" onerror="this.style.display='none'">
   <h1 id="headerTitle">KBS Dashboard</h1>
+  <button class="refreshBtn" id="refreshBtn" onclick="refreshCurrent()" title="Refresh">⟳</button>
 </header>
 
 <div id="channelScroller"></div>
@@ -129,9 +132,22 @@ function checkPin(){
 
 let channels = [];
 let activeIdx = null;
+let currentView = 'dashboard'; // 'dashboard' | 'video'
+let currentVideoCtx = null; // {chan, video, allVideos}
+
+function refreshCurrent(){
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  const done = ()=> btn.classList.remove('spinning');
+  if(currentView==='video' && currentVideoCtx){
+    openVideo(currentVideoCtx.chan, currentVideoCtx.video, currentVideoCtx.allVideos).then(done);
+  } else if(activeIdx!==null){
+    loadChannel(activeIdx).then(done);
+  } else { done(); }
+}
 
 async function init(){
-  channels = await (await fetch('/api/channels')).json();
+  channels = await (await fetch('/api/channels', {cache:'no-store'})).json();
   activeIdx = channels.length ? 0 : null;
   renderChips();
   if(activeIdx!==null) loadChannel(activeIdx);
@@ -158,6 +174,7 @@ function renderChips(){
 function goHome(){
   document.getElementById('backBtn').classList.add('hidden');
   document.getElementById('headerTitle').textContent = 'KBS Dashboard';
+  currentView = 'dashboard';
   if(activeIdx!==null) loadChannel(activeIdx);
 }
 
@@ -169,11 +186,19 @@ function fmt(n){
 }
 
 async function loadChannel(idx){
+  currentView = 'dashboard';
   const chan = channels[idx];
   const main = document.getElementById('main');
   main.innerHTML = `<div class="spin"></div>`;
-  const d = await (await fetch('/api/data?channelId='+chan.id)).json();
+  const d = await (await fetch('/api/data?channelId='+chan.id, {cache:'no-store'})).json();
   renderDashboard(chan, d);
+}
+
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  return Math.floor(s/3600)+'h ago';
 }
 
 function renderDashboard(chan, d){
@@ -182,6 +207,10 @@ function renderDashboard(chan, d){
     <div class="subcount">
       <img src="${d.thumb}">
       <div><div class="num">${fmt(d.subs)}</div><div class="lbl">Total subscribers</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="k">Lifetime views</div><div class="v">${fmt(d.totalViews)}</div></div>
+      <div class="card"><div class="k">Total videos</div><div class="v">${fmt(d.videoCount)}</div></div>
     </div>
     <h2 class="section">Channel analytics <span style="color:var(--sub);font-weight:400;font-size:13px;">(last 28 days)</span></h2>
     <div class="grid2">
@@ -192,6 +221,7 @@ function renderDashboard(chan, d){
     </div>
     <h2 class="section">Latest content</h2>
     <div id="vidlist"></div>
+    <div class="note" style="text-align:center;margin-top:10px;">Updated ${timeAgo(d.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
   `;
   const vl = document.getElementById('vidlist');
   d.videos.forEach((v,i)=>{
@@ -211,36 +241,63 @@ function renderDashboard(chan, d){
 async function openVideo(chan, video, allVideos){
   document.getElementById('backBtn').classList.remove('hidden');
   document.getElementById('headerTitle').textContent = 'Video';
+  currentView = 'video';
+  currentVideoCtx = { chan, video, allVideos };
   const main = document.getElementById('main');
   main.innerHTML = `<div class="spin"></div>`;
 
   const q = new URLSearchParams({ channelId: chan.id, videoId: video.id, publishedAt: video.snippet.publishedAt });
-  const vd = await (await fetch('/api/video?'+q)).json();
+  const vd = await (await fetch('/api/video?'+q, {cache:'no-store'})).json();
   const rank = video.rankByViews;
+  const e = vd.extra || {};
 
   main.innerHTML = `
     <div style="display:flex;gap:12px;margin-bottom:16px;">
       <img src="${video.snippet.thumbnails.medium.url}" style="width:100px;border-radius:8px;">
       <div><div style="font-weight:600;font-size:14px;">${video.snippet.title}</div>
-      <div class="note">Rank #${rank} of ${allVideos.length} recent videos, by views</div></div>
+      <div class="note">Rank #${rank} of ${allVideos.length} recent videos, by views</div>
+      <div class="note">Published ${new Date(video.snippet.publishedAt).toLocaleDateString()}</div></div>
     </div>
+    <h2 class="section">Overview</h2>
     <div class="statline"><span class="k">Views</span><span class="v">${fmt(video.statistics.viewCount)}</span></div>
     <div class="statline"><span class="k">Likes</span><span class="v">${fmt(video.statistics.likeCount)}</span></div>
     <div class="statline"><span class="k">Comments</span><span class="v">${fmt(video.statistics.commentCount)}</span></div>
+    <div class="statline"><span class="k">Watch time (hrs)</span><span class="v">${fmt((e.estimatedMinutesWatched||0)/60)}</span></div>
+    <div class="statline"><span class="k">Avg view duration</span><span class="v">${fmtDuration(e.averageViewDuration)}</span></div>
+    <div class="statline"><span class="k">Avg % viewed</span><span class="v">${e.averageViewPercentage ? e.averageViewPercentage.toFixed(1)+'%' : '—'}</span></div>
+    <div class="statline"><span class="k">Subscribers gained</span><span class="v">+${fmt(e.subscribersGained)}</span></div>
+    <div class="statline"><span class="k">Shares</span><span class="v">${fmt(e.shares)}</span></div>
+    <div class="statline"><span class="k">Est. revenue</span><span class="v">$${fmt(e.estimatedRevenue)}</span></div>
     <h2 class="section">Views since published</h2>
     <div id="chart"></div>
     <h2 class="section">Top sources</h2>
     <div id="sources"></div>
+    <h2 class="section">Devices</h2>
+    <div id="devices"></div>
+    <div class="note" style="text-align:center;margin-top:10px;">Updated ${timeAgo(vd.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
   `;
   drawLineChart(document.getElementById('chart'), vd.series.map(r=>Number(r[1])));
-  const srcEl = document.getElementById('sources');
-  const maxV = Math.max(1,...vd.sources.map(s=>Number(s[1])));
-  vd.sources.forEach(s=>{
+  fillBars('sources', vd.sources);
+  fillBars('devices', vd.devices);
+}
+
+function fmtDuration(sec){
+  if(!sec) return '—';
+  sec = Math.round(sec);
+  const m = Math.floor(sec/60), s = sec%60;
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function fillBars(elId, rows){
+  const el = document.getElementById(elId);
+  if(!rows || !rows.length){ el.innerHTML = `<div class="note">Not enough data yet.</div>`; return; }
+  const maxV = Math.max(1,...rows.map(s=>Number(s[1])));
+  rows.forEach(s=>{
     const pct = (Number(s[1])/maxV*100).toFixed(0);
     const div = document.createElement('div');
     div.className = 'srcbar';
     div.innerHTML = `<div class="row"><span>${s[0]}</span><span>${fmt(s[1])}</span></div><div class="bg"><div class="fg" style="width:${pct}%"></div></div>`;
-    srcEl.appendChild(div);
+    el.appendChild(div);
   });
 }
 
