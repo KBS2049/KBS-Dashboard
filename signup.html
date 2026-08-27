@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>KBS Studio - Sign up</title>
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+:root{--bg:#0f0f0f;--surface:#181818;--line:#303030;--text:#f1f1f1;--muted:#aaa}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Roboto,Arial,sans-serif}body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{width:min(420px,100%);padding:36px;background:var(--surface);border:1px solid var(--line);border-radius:16px;text-align:center}.logo{width:72px;height:72px;border-radius:12px;margin-bottom:18px}.card h1{font-size:22px;margin:0 0 8px}.card p{color:var(--muted);font-size:13px;margin:0 0 24px}.fields{display:grid;gap:10px}.fields input{height:44px;border:1px solid #3d3d3d;border-radius:8px;background:#111;color:#fff;padding:0 12px;outline:none}.fields input:focus{border-color:#fff}.btn{height:44px;border:0;border-radius:8px;background:#fff;color:#111;font-weight:600;margin-top:4px;cursor:pointer}.btn:disabled{opacity:.5}.error{min-height:20px;margin-top:12px;color:#ff6b6b;font-size:13px}.foot{margin-top:18px;color:#777;font-size:13px}.foot a{color:#ddd;text-decoration:none}.foot a:hover{color:#fff}
+</style>
+</head>
+<body>
+<div class="card"><img class="logo" src="icon.png" onerror="this.style.display='none'"><h1>Create your KBS Studio account</h1><p>Sign up, then connect your YouTube channel.</p><div class="fields"><input id="username" autocomplete="username" placeholder="Username"><input id="password" type="password" autocomplete="new-password" placeholder="Password (8+ characters)"><input id="confirm" type="password" autocomplete="new-password" placeholder="Confirm password"><button class="btn" id="btn" onclick="signup()">Create account</button></div><div class="error" id="error"></div><div class="foot">Already have an account? <a href="/">Sign in</a></div></div>
+<script>
+async function signup(){const b=document.getElementById('btn'),u=document.getElementById('username').value.trim(),p=document.getElementById('password').value,c=document.getElementById('confirm').value,e=document.getElementById('error');e.textContent='';if(!u||!p||!c){e.textContent='Please fill in all fields';return}if(p!==c){e.textContent='Passwords do not match';return}if(p.length<8){e.textContent='Password must be at least 8 characters';return}b.disabled=true;b.textContent='Creating account…';try{const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'signup',username:u,password:p})});const d=await r.json();if(!r.ok){if(d.error==='username_exists')throw Error('That username is already taken');throw Error('Username must be 3-32 characters using letters, numbers, dot, underscore or hyphen, and password must be 8+ characters')}location.href='/'}catch(x){e.textContent=x.message||'Could not create account'}finally{b.disabled=false;b.textContent='Create account'}}
+document.getElementById('confirm').addEventListener('keydown',e=>{if(e.key==='Enter')signup()});
+</script>
+</body>
+</html>
