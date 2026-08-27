@@ -1,6 +1,13 @@
 import { kv } from '@vercel/kv';
 import { getAccessToken } from './_helpers.js';
 
+async function safeFetch(url, token) {
+  try {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    return await r.json();
+  } catch (e) { return {}; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const { channelId } = req.query;
@@ -8,37 +15,56 @@ export default async function handler(req, res) {
   if (!c) { res.status(404).json({ error: 'not found' }); return; }
   const token = await getAccessToken(c.refresh_token);
 
-  const chRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`, { headers: { Authorization: `Bearer ${token}` } });
-  const chData = await chRes.json();
-  const stats = (chData.items && chData.items[0] && chData.items[0].statistics) || {};
-
   const end = new Date().toISOString().slice(0, 10);
   const start = new Date(Date.now() - 28 * 86400000).toISOString().slice(0, 10);
-  let analytics = { views: 0, estimatedMinutesWatched: 0, subscribersGained: 0, estimatedRevenue: 0 };
-  try {
-    const ar = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views,estimatedMinutesWatched,subscribersGained,estimatedRevenue`, { headers: { Authorization: `Bearer ${token}` } });
-    const ad = await ar.json();
-    if (ad.rows && ad.rows[0]) {
-      const row = ad.rows[0];
-      analytics = { views: row[0], estimatedMinutesWatched: row[1], subscribersGained: row[2], estimatedRevenue: row[3] };
-    }
-  } catch (e) {}
+  const A = 'https://youtubeanalytics.googleapis.com/v2/reports';
+
+  const [
+    chData, ad, dailyD, demoD, geoD, devD, subD, srcD, playlistD
+  ] = await Promise.all([
+    safeFetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views,estimatedMinutesWatched,subscribersGained,estimatedRevenue,likes,comments,shares`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=day&sort=day`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=viewerPercentage&dimensions=ageGroup,gender&sort=-viewerPercentage`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=country&sort=-views&maxResults=6`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=deviceType&sort=-views`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=subscribedStatus&sort=-views`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceType&sort=-views&maxResults=6`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=playlist&sort=-views&maxResults=5`, token)
+  ]);
+
+  const stats = (chData.items && chData.items[0] && chData.items[0].statistics) || {};
+
+  let analytics = { views: 0, estimatedMinutesWatched: 0, subscribersGained: 0, estimatedRevenue: 0, likes: 0, comments: 0, shares: 0 };
+  if (ad.rows && ad.rows[0]) {
+    const cols = (ad.columnHeaders || []).map(h => h.name);
+    const row = ad.rows[0];
+    cols.forEach((k, i) => { analytics[k] = row[i]; });
+  }
 
   let videos = [];
   try {
-    const pr = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=6&playlistId=${c.uploadsPlaylist}`, { headers: { Authorization: `Bearer ${token}` } });
-    const pd = await pr.json();
+    const pd = await safeFetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=6&playlistId=${c.uploadsPlaylist}`, token);
     const ids2 = (pd.items || []).map(i => i.snippet.resourceId.videoId).join(',');
     if (ids2) {
-      const vr = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids2}`, { headers: { Authorization: `Bearer ${token}` } });
-      const vd = await vr.json();
-      // chronological order: newest first (matches upload order)
+      const vd = await safeFetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${ids2}`, token);
       videos = (vd.items || []).sort((a, b) => new Date(b.snippet.publishedAt) - new Date(a.snippet.publishedAt));
-      // rank = position by views among this same set (1 = highest views)
       const byViews = [...videos].sort((a, b) => b.statistics.viewCount - a.statistics.viewCount);
       videos.forEach(v => { v.rankByViews = byViews.findIndex(x => x.id === v.id) + 1; });
     }
   } catch (e) {}
 
-  res.json({ title: c.title, thumb: c.thumb, subs: stats.subscriberCount, totalViews: stats.viewCount, videoCount: stats.videoCount, analytics, videos, fetchedAt: Date.now() });
+  res.json({
+    title: c.title, thumb: c.thumb,
+    subs: stats.subscriberCount, totalViews: stats.viewCount, videoCount: stats.videoCount,
+    analytics, videos,
+    dailyViews: dailyD.rows || [],
+    demographics: demoD.rows || [],
+    countries: geoD.rows || [],
+    devices: devD.rows || [],
+    subscribedStatus: subD.rows || [],
+    trafficSources: srcD.rows || [],
+    playlists: playlistD.rows || [],
+    fetchedAt: Date.now()
+  });
 }
