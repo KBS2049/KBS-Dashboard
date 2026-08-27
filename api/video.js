@@ -20,13 +20,22 @@ export default async function handler(req, res) {
   const A = 'https://youtubeanalytics.googleapis.com/v2/reports';
   const F = `filters=video==${videoId}`;
 
-  const [seriesD, sourcesD, extraD, devicesD, geoD, demoD] = await Promise.all([
+  const [
+    viewsSeriesD, subsSeriesD, watchSeriesD, revSeriesD,
+    sourcesD, extraD, devicesD, geoD, demoD,
+    searchTermsD, externalAppsD
+  ] = await Promise.all([
     safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=day&${F}&sort=day`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=subscribersGained&dimensions=day&${F}&sort=day`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedMinutesWatched&dimensions=day&${F}&sort=day`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedRevenue&dimensions=day&${F}&sort=day`, token),
     safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceType&${F}&sort=-views&maxResults=6`, token),
-    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,shares,comments,likes,estimatedRevenue&${F}`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,shares,comments,likes,estimatedRevenue,estimatedAdRevenue&${F}`, token),
     safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=deviceType&${F}&sort=-views`, token),
     safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=country&${F}&sort=-views&maxResults=6`, token),
-    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=viewerPercentage&dimensions=ageGroup,gender&${F}&sort=-viewerPercentage`, token)
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=viewerPercentage&dimensions=ageGroup,gender&${F}&sort=-viewerPercentage`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceDetail&filters=video==${videoId};insightTrafficSourceType==YT_SEARCH&sort=-views&maxResults=6`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceDetail&filters=video==${videoId};insightTrafficSourceType==EXT_URL&sort=-views&maxResults=6`, token)
   ]);
 
   let extra = {};
@@ -36,12 +45,17 @@ export default async function handler(req, res) {
   }
 
   res.json({
-    series: seriesD.rows || [],
+    viewsSeries: viewsSeriesD.rows || [],
+    subsSeries: subsSeriesD.rows || [],
+    watchSeries: watchSeriesD.rows || [],
+    revSeries: revSeriesD.rows || [],
     sources: sourcesD.rows || [],
     extra,
     devices: devicesD.rows || [],
     countries: geoD.rows || [],
     demographics: demoD.rows || [],
+    searchTerms: searchTermsD.rows || [],
+    externalApps: externalAppsD.rows || [],
     fetchedAt: Date.now()
   });
 }
