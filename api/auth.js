@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { createSession, cookie, ensureAdmin, hashPassword, verifyPassword, getSession } from './_auth.js';
+import { randomBytes } from 'node:crypto';
 
 async function body(req) { if (req.body && typeof req.body === 'object') return req.body; try { return JSON.parse(req.body || '{}'); } catch { return {}; } }
 
@@ -25,6 +26,18 @@ export default async function handler(req,res){
   const {action,username,password}=await body(req);
   if(action==='logout'){res.setHeader('Set-Cookie',[cookie('kbs_session','',0),cookie('kbs_view_as','',0)]);res.json({ok:true});return;}
   if(action==='bootstrap'){res.json({ok:ready});return;}
+  if(action==='signup'){
+    const normalized=String(username||'').trim().toLowerCase();
+    if(!/^[a-z0-9._-]{3,32}$/.test(normalized)||String(password||'').length<8){res.status(400).json({error:'username_3_32_and_password_8_required'});return;}
+    if(normalized==='admin'||await kv.exists(`userByUsername:${normalized}`)){res.status(409).json({error:'username_exists'});return;}
+    const id=randomBytes(12).toString('hex');
+    await kv.hset(`user:${id}`,{username:normalized,role:'user',active:'true',passwordHash:hashPassword(password),createdAt:Date.now()});
+    await kv.hset(`userByUsername:${normalized}`,{userId:id});
+    await kv.sadd('users',id);
+    const session=await createSession(id);
+    res.setHeader('Set-Cookie',[cookie('kbs_session',session),cookie('kbs_view_as','',0)]);
+    res.status(201).json({ok:true,user:{id,username:normalized,role:'user'}});return;
+  }
   if(!username||!password){res.status(400).json({error:'username_and_password_required'});return;}
   const normalized=String(username).trim().toLowerCase();let user=null;
   const admin=await kv.hgetall('user:admin');
