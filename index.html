@@ -2631,5 +2631,161 @@ function safeImg(v){
 
 </script>
 
+<style id="kbs-admin-fixes-style">
+.kbs-admin-actions{display:flex;gap:7px;align-items:center;margin-top:10px}
+.kbs-user-open{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kbs-user-delete{width:28px;height:28px;padding:0!important;display:inline-flex;align-items:center;justify-content:center;border:1px solid #4a4a4a!important;background:#1b1b1b!important;color:#aaa;border-radius:6px!important;font-size:14px!important;line-height:1}
+.kbs-user-delete:hover{color:#fff;background:#2a2a2a!important;border-color:#666!important}
+.kbs-admin-return{width:100%;margin-top:8px;border:1px solid #444;background:#1d1d1d;border-radius:7px;padding:9px 10px;font-size:12px;text-align:left}
+.kbs-admin-return:hover{background:#292929}
+.kbs-modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px}
+.kbs-modal.hidden{display:none}
+.kbs-modal-card{width:min(410px,100%);background:#181818;border:1px solid #383838;border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.kbs-modal-card h3{margin:0 0 8px;font-size:18px}
+.kbs-modal-card p{margin:0;color:#aaa;font-size:13px;line-height:1.5}
+.kbs-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.kbs-modal-actions button{border:1px solid #444;background:#222;border-radius:7px;padding:9px 13px;font-size:13px}
+.kbs-modal-actions .danger{background:#b4233c;border-color:#b4233c;color:#fff}
+</style>
+<div id="kbsDeleteModal" class="kbs-modal hidden" aria-hidden="true">
+  <div class="kbs-modal-card" role="dialog" aria-modal="true" aria-labelledby="kbsDeleteTitle">
+    <h3 id="kbsDeleteTitle">Delete user?</h3>
+    <p id="kbsDeleteText"></p>
+    <div class="kbs-modal-actions">
+      <button type="button" onclick="closeDeleteUserModal()">Cancel</button>
+      <button type="button" class="danger" id="kbsDeleteConfirm">Delete user</button>
+    </div>
+  </div>
+</div>
+<script id="kbs-admin-fixes-script">
+/* KBS_ADMIN_FIXES_V2 */
+(function(){
+  let pendingDeleteUser=null;
+
+  function ensureAdminReturn(){
+    const area=document.getElementById('adminArea');
+    if(!area)return;
+    let btn=document.getElementById('kbsAdminReturn');
+    if(!btn){
+      btn=document.createElement('button');
+      btn.id='kbsAdminReturn';
+      btn.className='kbs-admin-return hidden';
+      btn.textContent='← Back to Admin';
+      btn.onclick=window.exitUserView;
+      area.appendChild(btn);
+    }
+    return btn;
+  }
+
+  function syncAdminReturn(){
+    const btn=ensureAdminReturn();
+    if(!btn)return;
+    const viewing=document.cookie.includes('kbs_view_as=') && document.getElementById('viewBadge')?.style.display!=='none';
+    btn.classList.toggle('hidden',!viewing);
+  }
+
+  window.showUsers=async function(){
+    const box=document.getElementById('adminUsers');
+    if(!box)return;
+    box.classList.toggle('hidden');
+    if(box.classList.contains('hidden'))return;
+    try{
+      const r=await fetch('/api/users',{cache:'no-store'});
+      const users=await r.json();
+      if(!r.ok)throw new Error(users.error||'Could not load users');
+      box.innerHTML='<div style="font-size:12px;color:#aaa">Users</div>'+
+        users.map(u=>{
+          const admin=!!u.isAdmin;
+          return `<div class="adminUser"><span class="kbs-user-open">${esc(u.username)} <small style="color:#777">${admin?'Admin':u.channels+' ch'}</small></span>`+
+            `<div class="kbs-admin-actions"><button onclick="${admin?'void(0)':`viewUser('${esc(u.id)}')`}" ${admin?'disabled':''}>${admin?'You':'Open'}</button>`+
+            `${admin?'':`<button class="kbs-user-delete" title="Delete user" onclick="event.stopPropagation();openDeleteUserModal('${esc(u.id)}','${esc(u.username)}')">×</button>`}</div></div>`;
+        }).join('')+
+        '<div style="margin-top:10px"><button class="refresh" onclick="createUserPrompt()">＋ Add user</button></div>';
+    }catch(e){
+      box.innerHTML='<div style="font-size:12px;color:#ff6b6b">Could not load users.</div>';
+      console.error(e);
+    }
+  };
+
+  window.openDeleteUserModal=function(id,username){
+    pendingDeleteUser={id,username};
+    document.getElementById('kbsDeleteText').textContent=`This will permanently delete ${username}, their account, and all channels connected to that account. This cannot be undone.`;
+    const modal=document.getElementById('kbsDeleteModal');
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden','false');
+    document.getElementById('kbsDeleteConfirm').focus();
+  };
+
+  window.closeDeleteUserModal=function(){
+    pendingDeleteUser=null;
+    const modal=document.getElementById('kbsDeleteModal');
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden','true');
+  };
+
+  document.getElementById('kbsDeleteConfirm').onclick=async function(){
+    if(!pendingDeleteUser)return;
+    const id=pendingDeleteUser.id;
+    this.disabled=true;
+    this.textContent='Deleting…';
+    try{
+      const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',userId:id})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Could not delete user');
+      closeDeleteUserModal();
+      if(document.getElementById('viewBadge')?.style.display!=='none'){
+        await window.exitUserView();
+      }
+      await window.showUsers();
+      await window.showUsers();
+    }catch(e){
+      alert(e.message||'Could not delete user');
+    }finally{
+      this.disabled=false;
+      this.textContent='Delete user';
+    }
+  };
+
+  window.viewUser=async function(id){
+    try{
+      const r=await fetch('/api/view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:id})});
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error||'Could not open user');
+      const badge=document.getElementById('viewBadge');
+      badge.style.display='inline';
+      badge.textContent='Viewing '+(d.username||'user');
+      badge.onclick=window.exitUserView;
+      badge.style.cursor='pointer';
+      ensureAdminReturn().classList.remove('hidden');
+      await init();
+      const box=document.getElementById('adminUsers');
+      if(box)box.classList.remove('hidden');
+    }catch(e){alert(e.message||'Could not open user');}
+  };
+
+  window.exitUserView=async function(){
+    try{await fetch('/api/view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:'admin'})});}
+    finally{
+      const badge=document.getElementById('viewBadge');
+      badge.style.display='none';
+      const btn=ensureAdminReturn();
+      if(btn)btn.classList.add('hidden');
+      await init();
+      const box=document.getElementById('adminUsers');
+      if(box)box.classList.remove('hidden');
+    }
+  };
+
+  const oldUnlock=window.unlockApp;
+  window.unlockApp=function(){
+    oldUnlock();
+    ensureAdminReturn();
+    syncAdminReturn();
+  };
+
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDeleteUserModal();});
+  document.getElementById('kbsDeleteModal').addEventListener('click',e=>{if(e.target.id==='kbsDeleteModal')closeDeleteUserModal();});
+})();
+</script>
 </body>
 </html>
