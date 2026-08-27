@@ -61,7 +61,24 @@ function lineChart(rows,key){if(!rows||!rows.length)return '<div class="empty">N
 function renderLoading(){document.getElementById('main').innerHTML='<div class="page"><div class="loading"><div class="skeleton" style="width:180px;margin:0 auto 12px"></div>Loading analytics…</div></div>'}
 function renderEmpty(){document.getElementById('main').innerHTML='<div class="page"><div class="loading">No channel connected.<br><br><button class="refresh" onclick="location.href=\'/api/login\'">＋ Connect channel</button></div></div>'}
 function renderError(e){document.getElementById('main').innerHTML='<div class="page"><div class="loading">Unable to load analytics right now.<br><br><button class="refresh" onclick="loadChannel()">Try again</button></div></div>';console.error(e)}
-function fmt(n){const x=Number(n);return Number.isFinite(x)?x.toLocaleString('en-US'):'—'}function signed(n){const x=Number(n);return Number.isFinite(x)?(x>0?'+':'')+x.toLocaleString('en-US'):'—'}function money(n){const x=Number(n);return Number.isFinite(x)?'$'+x.toFixed(2):'$0.00'}function hours(n){const x=Number(n);return Number.isFinite(x)?(x/60).toLocaleString('en-US',{maximumFractionDigits:1})+' hrs':'—'}function pct(n){const x=Number(n);return Number.isFinite(x)?x.toFixed(1)+'%':'—'}function duration(n){const x=Number(n);if(!Number.isFinite(x))return'—';const s=Math.round(x),m=Math.floor(s/60),sec=String(s%60).padStart(2,'0');return m+':'+sec}function date(v){if(!v)return'—';return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function safeImg(v){return v?esc(v):'icon.png'}
+function fmt(n){
+  const x=Number(n);
+  if(!Number.isFinite(x)) return '—';
+
+  const abs=Math.abs(x);
+  const sign=x<0?'-':'';
+
+  if(abs>=1000000000)
+    return sign+(abs/1000000000).toFixed(abs>=10000000000?0:1).replace(/\.0$/,'')+'B';
+
+  if(abs>=1000000)
+    return sign+(abs/1000000).toFixed(abs>=10000000?0:1).replace(/\.0$/,'')+'M';
+
+  if(abs>=1000)
+    return sign+(abs/1000).toFixed(abs>=10000?0:1).replace(/\.0$/,'')+'K';
+
+  return sign+abs.toLocaleString('en-US');
+}function signed(n){const x=Number(n);return Number.isFinite(x)?(x>0?'+':'')+x.toLocaleString('en-US'):'—'}function money(n){const x=Number(n);return Number.isFinite(x)?'$'+x.toFixed(2):'$0.00'}function hours(n){const x=Number(n);return Number.isFinite(x)?(x/60).toLocaleString('en-US',{maximumFractionDigits:1})+' hrs':'—'}function pct(n){const x=Number(n);return Number.isFinite(x)?x.toFixed(1)+'%':'—'}function duration(n){const x=Number(n);if(!Number.isFinite(x))return'—';const s=Math.round(x),m=Math.floor(s/60),sec=String(s%60).padStart(2,'0');return m+':'+sec}function date(v){if(!v)return'—';return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function safeImg(v){return v?esc(v):'icon.png'}
 </script>
 </body>
 </html>
