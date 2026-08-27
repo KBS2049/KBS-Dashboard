@@ -1,0 +1,78 @@
+name: Polish KBS Studio navigation UI
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  polish:
+    if: ${{ !contains(github.event.head_commit.message, '[ui-polish]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply navigation polish
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          marker='KBS_UI_POLISH_V1'
+          if marker in s:
+              raise SystemExit(0)
+
+          patch=r'''<style id="kbs-ui-polish">
+          /* KBS_UI_POLISH_V1 */
+          .sidebar{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#383838 transparent;padding:20px 12px 18px;display:flex;flex-direction:column}
+          .sidebar::-webkit-scrollbar{width:6px}.sidebar::-webkit-scrollbar-track{background:transparent}.sidebar::-webkit-scrollbar-thumb{background:#383838;border-radius:99px}
+          .sidebar .nav{gap:5px}.sidebar .nav button{min-height:42px;padding:10px 13px}.sideTitle{padding:0 13px 9px}.sideDivider{margin:18px 8px}
+          .adminPanel{margin-top:12px;padding-top:12px}.adminUser{padding:9px 10px;min-height:40px}.adminUsers{gap:8px}
+          .topbar{padding:0 24px;gap:18px}.channelSelect{height:40px;min-width:300px;max-width:420px;padding:0 14px;border-radius:8px}
+          .refresh{width:40px;height:40px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0;flex:none}
+          .refresh::before{content:'↻';font-size:21px;line-height:1;color:#ddd}.refresh.spin::before{animation:spin .7s linear infinite}
+          .topbar>.logoutBtn{display:none}
+          .kbs-sidebar-logout{margin-top:auto;padding-top:18px}.kbs-sidebar-logout .sideDivider{margin:0 8px 14px}
+          .kbs-sidebar-logout button{width:100%;height:42px;border:1px solid #5b2029;background:#2a1518;color:#ff8b98;border-radius:8px;font-size:13px;text-align:left;padding:0 13px;display:flex;align-items:center;gap:11px}
+          .kbs-sidebar-logout button:hover{background:#35181d;border-color:#7a2a35;color:#ffb0b8}
+          .kbs-sidebar-logout .logoutIcon{width:19px;text-align:center;font-size:15px}
+          @media(max-width:1000px){.topbar{padding:0 18px}.channelSelect{min-width:260px;max-width:360px}}
+          @media(max-width:700px){.topbar{padding:env(safe-area-inset-top) 12px 0;gap:9px}.channelSelect{min-width:0;max-width:none;height:38px}.refresh{width:38px;height:38px}.sidebar{padding:16px 12px 20px}.kbs-sidebar-logout{padding-top:16px}}
+          </style>'''
+
+          s=s.replace('</head>',patch+'\n</head>')
+
+          js=r'''<script id="kbs-ui-polish-script">
+          (function(){
+            /* KBS_UI_POLISH_V1 */
+            function setupSidebarLogout(){
+              const sidebar=document.getElementById('sidebar');
+              const original=document.querySelector('.topbar>.logoutBtn');
+              if(!sidebar||!original||document.getElementById('kbsSidebarLogout'))return;
+              const wrap=document.createElement('div');
+              wrap.id='kbsSidebarLogout';
+              wrap.className='kbs-sidebar-logout';
+              wrap.innerHTML='<div class="sideDivider"></div><button type="button" onclick="logout()"><span class="logoutIcon">↪</span><span>Log out</span></button>';
+              sidebar.appendChild(wrap);
+              original.style.display='none';
+            }
+            const oldUnlock=window.unlockApp;
+            if(typeof oldUnlock==='function'){
+              window.unlockApp=function(){oldUnlock();setupSidebarLogout();};
+            }
+            if(document.readyState!=='loading')setupSidebarLogout();
+            else document.addEventListener('DOMContentLoaded',setupSidebarLogout);
+          })();
+          </script>'''
+          s=s.replace('</body>',js+'\n</body>')
+          p.write_text(s)
+          PY
+      - name: Commit polish
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "[ui-polish] refine sidebar and top navigation"
+          git push
