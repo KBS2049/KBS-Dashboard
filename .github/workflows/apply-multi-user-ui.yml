@@ -1,0 +1,58 @@
+name: Build multi-user UI
+
+on:
+  push:
+    branches: [multi-user-v2]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-ui:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch dashboard UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old='''#pinScreen{position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:99}.pinCard{width:min(420px,calc(100% - 32px));text-align:center;padding:36px;background:var(--surface);border:1px solid var(--line);border-radius:16px}.pinCard img{width:72px;height:72px;border-radius:12px;margin-bottom:18px}.pinCard h2{margin:0 0 8px;font-size:22px}.pinCard p{color:var(--muted);font-size:13px;margin:0 0 24px}.pinBoxes{display:flex;justify-content:center;gap:10px}.pinBoxes input{width:54px;height:58px;border:1px solid #3d3d3d;border-radius:8px;background:#111;color:#fff;text-align:center;font-size:24px;outline:none}.pinBoxes input:focus{border-color:#fff}.pinError{height:20px;margin-top:12px;color:#ff6b6b;font-size:13px}'''
+          new=old+'''.loginFields{display:grid;gap:10px;margin-top:18px}.loginFields input{width:100%;height:44px;border:1px solid #3d3d3d;border-radius:8px;background:#111;color:#fff;padding:0 12px;outline:none}.loginFields input:focus{border-color:#fff}.loginBtn{width:100%;height:44px;border:0;border-radius:8px;background:#fff;color:#111;font-weight:600;margin-top:4px}.loginBtn:disabled{opacity:.5}.adminPanel{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}.adminUsers{display:grid;gap:7px;margin-top:8px}.adminUser{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#151515}.adminUser button{border:1px solid #444;background:#222;border-radius:6px;padding:6px 9px;font-size:11px}.viewBadge{display:none;font-size:11px;color:#aaa;margin-left:8px}.logoutBtn{border:1px solid var(--line);background:var(--surface);border-radius:7px;height:38px;padding:0 12px;font-size:13px}'''
+          if old not in s: raise SystemExit('login CSS anchor not found')
+          s=s.replace(old,new,1)
+          old_html='''<div id="pinScreen"><div class="pinCard"><img src="icon.png" onerror="this.style.display='none'"><h2>Welcome to KBS Studio</h2><p>Enter your 4-digit PIN to continue</p><div class="pinBoxes"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"><input maxlength="1" inputmode="numeric"></div><div class="pinError" id="pinError"></div></div></div>'''
+          new_html='''<div id="pinScreen"><div class="pinCard"><img src="icon.png" onerror="this.style.display='none'"><h2>Welcome to KBS Studio</h2><p>Sign in to access your YouTube analytics</p><div class="loginFields"><input id="loginUser" autocomplete="username" placeholder="Username"><input id="loginPass" type="password" autocomplete="current-password" placeholder="Password"><button class="loginBtn" id="loginBtn" onclick="login()">Sign in</button></div><div class="pinError" id="pinError"></div></div></div>'''
+          if old_html not in s: raise SystemExit('login HTML anchor not found')
+          s=s.replace(old_html,new_html,1)
+          old_top='''<header class="topbar"><button class="hamb" onclick="toggleSidebar()">☰</button><div class="brand"><img src="icon.png" onerror="this.style.display='none'"><strong>KBS Studio</strong></div><select id="channelSelect" class="channelSelect" onchange="switchChannel(this.value)"></select><div class="topSpacer"></div><button class="refresh" id="refreshBtn" onclick="refreshCurrent()">↻ Refresh</button></header>'''
+          new_top='''<header class="topbar"><button class="hamb" onclick="toggleSidebar()">☰</button><div class="brand"><img src="icon.png" onerror="this.style.display='none'"><strong>KBS Studio</strong></div><select id="channelSelect" class="channelSelect" onchange="switchChannel(this.value)"></select><span class="viewBadge" id="viewBadge"></span><div class="topSpacer"></div><button class="refresh" id="refreshBtn" onclick="refreshCurrent()">↻ Refresh</button><button class="logoutBtn" onclick="logout()">Log out</button></header>'''
+          if old_top not in s: raise SystemExit('topbar anchor not found')
+          s=s.replace(old_top,new_top,1)
+          old_side='''<div class="sideDivider"></div><div class="sideTitle">Channel</div><nav class="nav"><button onclick="location.href='/api/login'"><span class="navIcon">＋</span><span>Add channel</span></button></nav></aside>'''
+          new_side='''<div class="sideDivider"></div><div class="sideTitle">Channel</div><nav class="nav"><button onclick="location.href='/api/login'"><span class="navIcon">＋</span><span>Add channel</span></button></nav><div id="adminArea" class="hidden"><div class="sideDivider"></div><div class="sideTitle">Admin</div><nav class="nav"><button onclick="showUsers()"><span class="navIcon">♙</span><span>Users</span></button></nav><div id="adminUsers" class="adminPanel hidden"></div></div></aside>'''
+          if old_side not in s: raise SystemExit('sidebar anchor not found')
+          s=s.replace(old_side,new_side,1)
+          start=s.index("<script>\nconst PIN='")
+          end=s.index("\n</script>",start)
+          script=s[start:end+len("\n</script>")]
+          script=script.replace("const PIN='4679';const boxes=[...document.querySelectorAll('.pinBoxes input')];let channels=[];let active=null;let data=null;let tab='overview';let videoData=null;\nboxes[0].focus();boxes.forEach((b,i)=>{b.addEventListener('input',()=>{b.value=b.value.replace(/\\D/g,'');if(b.value&&i<3)boxes[i+1].focus();if(boxes.every(x=>x.value))checkPin()});b.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!b.value&&i)boxes[i-1].focus()})});\nfunction checkPin(){if(boxes.map(x=>x.value).join('')===PIN){document.getElementById('pinScreen').style.display='none';document.getElementById('app').style.display='block';init()}else{document.getElementById('pinError').textContent='Incorrect PIN';boxes.forEach(x=>x.value='');boxes[0].focus()}}", "let sessionUser=null;let channels=[];let active=null;let data=null;let tab='overview';let videoData=null;\nasync function boot(){try{const r=await fetch('/api/auth',{cache:'no-store'});const d=await r.json();if(d.authenticated){sessionUser=d.user;unlockApp();}else{document.getElementById('pinScreen').style.display='flex';document.getElementById('loginUser').focus();}}catch(e){document.getElementById('pinError').textContent='Unable to connect. Try again.'}}\nfunction unlockApp(){document.getElementById('pinScreen').style.display='none';document.getElementById('app').style.display='block';if(sessionUser.role==='admin')document.getElementById('adminArea').classList.remove('hidden');init()}\nasync function login(){const btn=document.getElementById('loginBtn'),u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value;if(!u||!p){document.getElementById('pinError').textContent='Enter username and password';return}btn.disabled=true;btn.textContent='Signing in…';try{const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(!r.ok)throw Error(d.error||'Login failed');sessionUser=d.user;document.getElementById('pinError').textContent='';unlockApp()}catch(e){document.getElementById('pinError').textContent='Invalid username or password'}finally{btn.disabled=false;btn.textContent='Sign in'}}\nasync function logout(){await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});location.reload()}\ndocument.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')login()});\nboot()",1)
+          s=s[:start]+script+s[end+len("\n</script"):]
+          # Add admin functions before renderLoading.
+          marker='function renderLoading(){'
+          extra='''async function showUsers(){const box=document.getElementById('adminUsers');box.classList.toggle('hidden');if(!box.classList.contains('hidden')){const users=await fetch('/api/users',{cache:'no-store'}).then(r=>r.json());box.innerHTML='<div style="font-size:12px;color:#aaa">Users</div>'+users.map(u=>`<div class="adminUser"><span>${esc(u.username)} <small style="color:#777">${u.channels} ch</small></span><button onclick="viewUser('${esc(u.id)}')">Open</button></div>`).join('')+'<div style="margin-top:10px"><button class="refresh" onclick="createUserPrompt()">＋ Add user</button></div>'}}\nasync function createUserPrompt(){const username=prompt('New username');if(!username)return;const password=prompt('Temporary password (8+ characters)');if(!password)return;const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});const d=await r.json();if(!r.ok){alert(d.error||'Could not create user');return}showUsers()}\nasync function viewUser(id){const r=await fetch('/api/view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:id})});if(!r.ok){alert('Could not open user');return}document.getElementById('viewBadge').style.display='inline';document.getElementById('viewBadge').textContent='Viewing user';await init()}\nasync function exitUserView(){await fetch('/api/view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:'admin'})});document.getElementById('viewBadge').style.display='none';await init()}\n'''
+          if marker not in s: raise SystemExit('render marker not found')
+          s=s.replace(marker,extra+marker,1)
+          # Make view badge clickable only for admin by adding an onclick after unlock.
+          s=s.replace("if(sessionUser.role==='admin')document.getElementById('adminArea').classList.remove('hidden');init()", "if(sessionUser.role==='admin'){document.getElementById('adminArea').classList.remove('hidden');document.getElementById('viewBadge').onclick=exitUserView;document.getElementById('viewBadge').style.cursor='pointer';}init()",1)
+          p.write_text(s)
+          PY
+      - name: Commit UI patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Apply multi-user dashboard UI [skip ci]"
+          git push
