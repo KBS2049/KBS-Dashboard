@@ -87,6 +87,6 @@ function fmt(n){
 
   return sign+abs.toLocaleString('en-US');
 }function signed(n){const x=Number(n);return Number.isFinite(x)?(x>0?'+':'')+x.toLocaleString('en-US'):'—'}function money(n){const x=Number(n);return Number.isFinite(x)?'$'+x.toFixed(2):'$0.00'}function hours(n){const x=Number(n);return Number.isFinite(x)?(x/60).toLocaleString('en-US',{maximumFractionDigits:1})+' hrs':'—'}function pct(n){const x=Number(n);return Number.isFinite(x)?x.toFixed(1)+'%':'—'}function duration(n){const x=Number(n);if(!Number.isFinite(x))return'—';const s=Math.round(x),m=Math.floor(s/60),sec=String(s%60).padStart(2,'0');return m+':'+sec}function date(v){if(!v)return'—';return new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function safeImg(v){return v?esc(v):'icon.png'}
-</script>>
+</script>
 </body>
 </html>
