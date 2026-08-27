@@ -1,6 +1,13 @@
 import { kv } from '@vercel/kv';
 import { getAccessToken } from './_helpers.js';
 
+async function safeFetch(url, token) {
+  try {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    return await r.json();
+  } catch (e) { return {}; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const { channelId, videoId, publishedAt } = req.query;
@@ -10,37 +17,31 @@ export default async function handler(req, res) {
 
   const end = new Date().toISOString().slice(0, 10);
   const start = (publishedAt || end).slice(0, 10);
+  const A = 'https://youtubeanalytics.googleapis.com/v2/reports';
+  const F = `filters=video==${videoId}`;
 
-  let series = [];
-  try {
-    const r1 = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=day&filters=video==${videoId}&sort=day`, { headers: { Authorization: `Bearer ${token}` } });
-    const d1 = await r1.json();
-    series = d1.rows || [];
-  } catch (e) {}
-
-  let sources = [];
-  try {
-    const r2 = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceType&filters=video==${videoId}&sort=-views&maxResults=5`, { headers: { Authorization: `Bearer ${token}` } });
-    const d2 = await r2.json();
-    sources = d2.rows || [];
-  } catch (e) {}
+  const [seriesD, sourcesD, extraD, devicesD, geoD, demoD] = await Promise.all([
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=day&${F}&sort=day`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=insightTrafficSourceType&${F}&sort=-views&maxResults=6`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,shares,comments,likes,estimatedRevenue&${F}`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=deviceType&${F}&sort=-views`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=country&${F}&sort=-views&maxResults=6`, token),
+    safeFetch(`${A}?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=viewerPercentage&dimensions=ageGroup,gender&${F}&sort=-viewerPercentage`, token)
+  ]);
 
   let extra = {};
-  try {
-    const r3 = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=estimatedMinutesWatched,averageViewDuration,averageViewPercentage,subscribersGained,subscribersLost,shares,comments,likes,dislikes,estimatedRevenue&filters=video==${videoId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const d3 = await r3.json();
-    if (d3.rows && d3.rows[0]) {
-      const cols = d3.columnHeaders.map(c => c.name);
-      d3.rows[0].forEach((v, i) => { extra[cols[i]] = v; });
-    }
-  } catch (e) {}
+  if (extraD.rows && extraD.rows[0]) {
+    const cols = (extraD.columnHeaders || []).map(h => h.name);
+    extraD.rows[0].forEach((v, i) => { extra[cols[i]] = v; });
+  }
 
-  let devices = [];
-  try {
-    const r4 = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${start}&endDate=${end}&metrics=views&dimensions=deviceType&filters=video==${videoId}&sort=-views`, { headers: { Authorization: `Bearer ${token}` } });
-    const d4 = await r4.json();
-    devices = d4.rows || [];
-  } catch (e) {}
-
-  res.json({ series, sources, extra, devices, fetchedAt: Date.now() });
+  res.json({
+    series: seriesD.rows || [],
+    sources: sourcesD.rows || [],
+    extra,
+    devices: devicesD.rows || [],
+    countries: geoD.rows || [],
+    demographics: demoD.rows || [],
+    fetchedAt: Date.now()
+  });
 }
