@@ -28,6 +28,15 @@
 </head>
 <body>
 <div id="pinScreen"><div class="pinCard"><img src="icon.png" onerror="this.style.display='none'"><h2>Welcome to KBS Studio</h2><p>Sign in to access your YouTube analytics</p><div class="loginFields"><input id="loginUser" autocomplete="username" placeholder="Username"><input id="loginPass" type="password" autocomplete="current-password" placeholder="Password"><button class="loginBtn" id="loginBtn" onclick="login()">Sign in</button></div><div class="pinError" id="pinError"></div></div></div>
+  <div style="text-align:center; margin-top:16px;">
+  <span style="color:#94a3b8;">Don't have an account?</span>
+  <a
+    href="/signup.html"
+    style="color:#6366f1; font-weight:600; text-decoration:none; margin-left:6px;"
+  >
+    Sign Up
+  </a>
+</div>
 <div class="app" id="app">
 <header class="topbar"><button class="hamb" onclick="toggleSidebar()">☰</button><div class="brand"><img src="icon.png" onerror="this.style.display='none'"><strong>KBS Studio</strong></div><select id="channelSelect" class="channelSelect" onchange="switchChannel(this.value)"></select><span class="viewBadge" id="viewBadge"></span><div class="topSpacer"></div><button class="refresh" id="refreshBtn" onclick="refreshCurrent()">↻ Refresh</button><button class="logoutBtn" onclick="logout()">Log out</button></header>
 <div class="layout"><aside class="sidebar" id="sidebar"><div class="sideTitle">Studio</div><nav class="nav"><button data-tab="overview" onclick="setTab('overview')" class="active"><span class="navIcon">⌂</span><span>Overview</span></button><button data-tab="content" onclick="setTab('content')"><span class="navIcon">▶</span><span>Content</span></button><button data-tab="reach" onclick="setTab('reach')"><span class="navIcon">⌁</span><span>Reach</span></button><button data-tab="engagement" onclick="setTab('engagement')"><span class="navIcon">◷</span><span>Engagement</span></button><button data-tab="audience" onclick="setTab('audience')"><span class="navIcon">◉</span><span>Audience</span></button><button data-tab="revenue" onclick="setTab('revenue')"><span class="navIcon">$</span><span>Revenue</span></button></nav><div class="sideDivider"></div><div class="sideTitle">Channel</div><nav class="nav"><button onclick="location.href='/api/login'"><span class="navIcon">＋</span><span>Add channel</span></button></nav><div id="adminArea" class="hidden"><div class="sideDivider"></div><div class="sideTitle">Admin</div><nav class="nav"><button onclick="showUsers()"><span class="navIcon">♙</span><span>Users</span></button></nav><div id="adminUsers" class="adminPanel hidden"></div></div></aside><main class="main" id="main"></main></div></div>
