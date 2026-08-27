@@ -1,4 +1,8 @@
-export default function handler(req, res) {
+import { getSession } from './_auth.js';
+
+export default async function handler(req, res) {
+  const user = await getSession(req);
+  if (!user) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `https://${req.headers.host}/api/callback`,
