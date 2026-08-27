@@ -22,7 +22,9 @@ export function verifyPassword(password, stored) {
 }
 
 function secret() {
-  return process.env.SESSION_SECRET || process.env.GOOGLE_CLIENT_SECRET || 'change-this-session-secret';
+  const value = process.env.SESSION_SECRET;
+  if (!value) throw new Error('SESSION_SECRET is not configured');
+  return value;
 }
 
 function sign(id) {
