@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<style>html{padding-top:env(safe-area-inset-top);}</style>
 <title>KBS Dashboard</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,73 +10,94 @@
 <link rel="apple-touch-icon" href="icon.png">
 <style>
   :root{
-    --bg:#0f0f0f; --card:#1c1c1c; --card2:#181818; --text:#fff; --sub:#9c9c9c;
-    --accent:#22c1e0; --border:#2a2a2a;
+    --bg:#0a0a0a; --card:#1a1a1a; --card2:#151515; --text:#fff; --sub:#9c9c9c;
+    --accent:#22c1e0; --accent2:#5ee6ff; --border:#242424; --green:#3ddc84;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding-bottom:30px;}
+  html{padding-top:env(safe-area-inset-top); background:var(--bg);}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding-bottom:40px; -webkit-font-smoothing:antialiased;}
 
   /* PIN screen */
-  #pinScreen{position:fixed; inset:0; background:#000; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;}
-  #pinScreen img{width:64px; height:64px; border-radius:14px; margin-bottom:18px;}
-  #pinScreen h2{font-weight:600; margin:0 0 24px;}
+  #pinScreen{position:fixed; inset:0; background:radial-gradient(circle at 50% 30%, #141414, #000 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;}
+  #pinScreen img{width:64px; height:64px; border-radius:16px; margin-bottom:18px; box-shadow:0 8px 30px rgba(34,193,224,0.25);}
+  #pinScreen h2{font-weight:600; margin:0 0 26px; letter-spacing:0.3px;}
   .pinBoxes{display:flex; gap:14px;}
-  .pinBoxes input{width:48px; height:56px; text-align:center; font-size:24px; background:var(--card); border:1px solid var(--border); border-radius:8px; color:#fff;}
-  .pinBoxes input:focus{border-color:var(--accent); outline:none;}
+  .pinBoxes input{width:48px; height:56px; text-align:center; font-size:24px; background:var(--card); border:1px solid var(--border); border-radius:10px; color:#fff; transition:border-color .15s, transform .1s;}
+  .pinBoxes input:focus{border-color:var(--accent); outline:none; transform:scale(1.05);}
   #pinError{color:#ff5252; font-size:13px; margin-top:16px; height:16px;}
 
-  header{display:flex; align-items:center; gap:10px; padding:16px; padding-top:calc(16px + env(safe-area-inset-top)); position:sticky; top:0; background:var(--bg); z-index:10; border-bottom:1px solid var(--border);}
-  header img{width:30px; height:30px; border-radius:7px;}
-  header h1{font-size:19px; margin:0; font-weight:700;}
-  .backbtn{font-size:22px; background:none; border:none; color:var(--text); cursor:pointer; padding:0 6px;}
-  .refreshBtn{margin-left:auto; font-size:20px; background:none; border:none; color:var(--text); cursor:pointer; padding:4px 8px; line-height:1;}
+  header{display:flex; align-items:center; gap:10px; padding:14px 16px; padding-top:calc(14px + env(safe-area-inset-top)); position:sticky; top:0; background:rgba(10,10,10,0.85); backdrop-filter:blur(12px); z-index:10; border-bottom:1px solid var(--border);}
+  header img.logo{width:28px; height:28px; border-radius:7px;}
+  header h1{font-size:18px; margin:0; font-weight:700; letter-spacing:0.2px;}
+  .backbtn{font-size:20px; background:none; border:none; color:var(--text); cursor:pointer; padding:2px 8px; border-radius:8px;}
+  .backbtn:active{background:var(--card);}
+  .refreshBtn{margin-left:auto; font-size:18px; background:var(--card); border:1px solid var(--border); color:var(--text); cursor:pointer; padding:7px 10px; line-height:1; border-radius:10px; transition:transform .2s;}
   .refreshBtn.spinning{animation:sp 0.7s linear infinite;}
+  .refreshBtn:active{transform:scale(0.9);}
 
   #channelScroller{display:flex; gap:14px; overflow-x:auto; padding:14px 16px; border-bottom:1px solid var(--border);}
   #channelScroller::-webkit-scrollbar{display:none;}
-  .chip{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer; opacity:.55;}
+  .chip{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:60px; cursor:pointer; opacity:.5; transition:opacity .2s;}
   .chip.active{opacity:1;}
-  .chip img{width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid transparent;}
-  .chip.active img{border-color:var(--accent);}
-  .chip span{font-size:11px; color:var(--sub); max-width:64px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-  .chip.active span{color:var(--text);}
-  .addchip{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:64px; cursor:pointer;}
-  .addchip .plus{width:50px; height:50px; border-radius:50%; border:2px dashed var(--border); display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--sub);}
+  .chip img{width:48px; height:48px; border-radius:50%; object-fit:cover; border:2px solid transparent; transition:border-color .2s;}
+  .chip.active img{border-color:var(--accent); box-shadow:0 0 0 3px rgba(34,193,224,0.15);}
+  .chip span{font-size:11px; color:var(--sub); max-width:60px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .chip.active span{color:var(--text); font-weight:600;}
+  .addchip{display:flex; flex-direction:column; align-items:center; gap:6px; min-width:60px; cursor:pointer;}
+  .addchip .plus{width:48px; height:48px; border-radius:50%; border:1.5px dashed #3a3a3a; display:flex; align-items:center; justify-content:center; font-size:20px; color:var(--sub);}
 
-  main{padding:16px;}
-  .subcount{display:flex; align-items:center; gap:12px; margin-bottom:18px;}
-  .subcount img{width:56px; height:56px; border-radius:50%;}
-  .subcount .num{font-size:22px; font-weight:700;}
-  .subcount .lbl{font-size:13px; color:var(--sub);}
+  main{padding:16px; animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
-  h2.section{font-size:16px; margin:22px 0 10px;}
+  .subcount{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
+  .subcount img{width:52px; height:52px; border-radius:50%; box-shadow:0 4px 16px rgba(0,0,0,0.4);}
+  .subcount .num{font-size:21px; font-weight:700;}
+  .subcount .lbl{font-size:12.5px; color:var(--sub);}
+
+  .tabbar{display:flex; gap:6px; margin:14px 0 18px; background:var(--card2); padding:4px; border-radius:12px;}
+  .tabbtn{flex:1; text-align:center; padding:8px 0; border-radius:9px; font-size:13px; font-weight:600; color:var(--sub); cursor:pointer; transition:all .15s;}
+  .tabbtn.active{background:var(--card); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+
+  h2.section{font-size:15px; margin:22px 0 10px; font-weight:700; letter-spacing:0.2px;}
+  .section .hint{color:var(--sub); font-weight:400; font-size:12px;}
+
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-  .card{background:var(--card); border-radius:10px; padding:14px;}
-  .card .k{font-size:13px; color:var(--sub); margin-bottom:6px;}
-  .card .v{font-size:20px; font-weight:700;}
+  .card{background:linear-gradient(155deg,#1d1d1d,#141414); border:1px solid var(--border); border-radius:14px; padding:14px;}
+  .card .k{font-size:12.5px; color:var(--sub); margin-bottom:6px;}
+  .card .v{font-size:19px; font-weight:700;}
+  .card .v.pos{color:var(--green);}
 
-  .vidrow{display:flex; gap:12px; background:var(--card); border-radius:10px; padding:10px; margin-bottom:10px; cursor:pointer;}
-  .vidrow img{width:64px; height:64px; object-fit:cover; border-radius:6px; flex-shrink:0;}
+  .vidrow{display:flex; gap:12px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px; margin-bottom:10px; cursor:pointer; transition:transform .12s, background .12s;}
+  .vidrow:active{transform:scale(0.98); background:#202020;}
+  .vidrow img{width:62px; height:62px; object-fit:cover; border-radius:8px; flex-shrink:0;}
   .vidrow .info{flex:1; min-width:0;}
-  .vidrow .title{font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
-  .vidrow .meta{font-size:12px; color:var(--sub); margin-top:4px;}
-  .rank{font-size:11px; background:#2a2a2a; padding:2px 6px; border-radius:5px; color:var(--accent); margin-left:6px;}
+  .vidrow .title{font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.3;}
+  .vidrow .meta{font-size:11.5px; color:var(--sub); margin-top:5px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;}
+  .rank{font-size:10.5px; background:rgba(34,193,224,0.12); padding:2px 7px; border-radius:6px; color:var(--accent2); font-weight:600;}
 
-  .statline{display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border);}
+  .statline{display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border);}
   .statline .k{color:var(--sub); font-size:13px;}
-  .statline .v{font-size:15px; font-weight:600;}
+  .statline .v{font-size:14.5px; font-weight:600;}
 
-  svg{width:100%; height:180px;}
-  .srcbar{margin:10px 0;}
-  .srcbar .row{display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;}
-  .srcbar .bg{height:5px; background:#2a2a2a; border-radius:3px; overflow:hidden;}
-  .srcbar .fg{height:100%; background:var(--accent);}
+  .chartWrap{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 10px;}
+  svg{width:100%; display:block;}
+  .barChart{height:120px;}
+  .lineChartH{height:150px;}
+
+  .srcbar{margin:12px 0;}
+  .srcbar .row{display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;}
+  .srcbar .row .lbl{color:#ddd;}
+  .srcbar .row .val{color:var(--sub); font-variant-numeric:tabular-nums;}
+  .srcbar .bg{height:6px; background:#242424; border-radius:4px; overflow:hidden;}
+  .srcbar .fg{height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:4px; transition:width .5s ease;}
 
   .center{text-align:center; padding:60px 20px; color:var(--sub);}
   .btn{background:var(--accent); color:#000; border:none; padding:12px 22px; border-radius:24px; font-weight:700; font-size:15px; cursor:pointer;}
   .note{font-size:11px; color:var(--sub); margin-top:6px;}
-  .spin{width:22px;height:22px;border:3px solid #333;border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;margin:20px auto;}
+  .skel{background:linear-gradient(90deg,#181818 25%,#222 37%,#181818 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:10px;}
+  @keyframes shimmer{0%{background-position:100% 0;} 100%{background-position:0 0;}}
   @keyframes sp{to{transform:rotate(360deg);}}
+  .hidden{display:none !important;}
 </style>
 </head>
 <body>
@@ -96,7 +116,7 @@
 
 <header>
   <button class="backbtn hidden" id="backBtn" onclick="goHome()">←</button>
-  <img src="icon.png" onerror="this.style.display='none'">
+  <img class="logo" src="icon.png" onerror="this.style.display='none'">
   <h1 id="headerTitle">KBS Dashboard</h1>
   <button class="refreshBtn" id="refreshBtn" onclick="refreshCurrent()" title="Refresh">⟳</button>
 </header>
@@ -132,8 +152,10 @@ function checkPin(){
 
 let channels = [];
 let activeIdx = null;
-let currentView = 'dashboard'; // 'dashboard' | 'video'
-let currentVideoCtx = null; // {chan, video, allVideos}
+let currentView = 'dashboard';
+let currentVideoCtx = null;
+let activeTab = 'overview';
+let lastChanData = null;
 
 function refreshCurrent(){
   const btn = document.getElementById('refreshBtn');
@@ -161,7 +183,7 @@ function renderChips(){
     const chip = document.createElement('div');
     chip.className = 'chip'+(i===activeIdx?' active':'');
     chip.innerHTML = `<img src="${c.thumb}"><span>${c.title}</span>`;
-    chip.onclick = ()=>{ activeIdx=i; renderChips(); loadChannel(i); };
+    chip.onclick = ()=>{ activeIdx=i; activeTab='overview'; renderChips(); loadChannel(i); };
     el.appendChild(chip);
   });
   const add = document.createElement('div');
@@ -184,21 +206,40 @@ function fmt(n){
   if(n>=1e3) return (n/1e3).toFixed(1)+'k';
   return n.toLocaleString();
 }
-
-async function loadChannel(idx){
-  currentView = 'dashboard';
-  const chan = channels[idx];
-  const main = document.getElementById('main');
-  main.innerHTML = `<div class="spin"></div>`;
-  const d = await (await fetch('/api/data?channelId='+chan.id, {cache:'no-store'})).json();
-  renderDashboard(chan, d);
+function fmtDuration(sec){
+  if(!sec) return '—';
+  sec = Math.round(sec);
+  const m = Math.floor(sec/60), s = sec%60;
+  return `${m}:${s.toString().padStart(2,'0')}`;
 }
-
 function timeAgo(ts){
   const s = Math.floor((Date.now()-ts)/1000);
   if(s<60) return 'just now';
   if(s<3600) return Math.floor(s/60)+'m ago';
   return Math.floor(s/3600)+'h ago';
+}
+function skeleton(){
+  return `<div class="skel" style="height:52px;border-radius:50%;width:52px;margin-bottom:16px;"></div>
+  <div class="grid2">
+    <div class="skel" style="height:70px;"></div><div class="skel" style="height:70px;"></div>
+    <div class="skel" style="height:70px;"></div><div class="skel" style="height:70px;"></div>
+  </div>
+  <div class="skel" style="height:160px;margin-top:20px;"></div>`;
+}
+
+async function loadChannel(idx){
+  currentView = 'dashboard';
+  const chan = channels[idx];
+  const main = document.getElementById('main');
+  main.innerHTML = skeleton();
+  const d = await (await fetch('/api/data?channelId='+chan.id, {cache:'no-store'})).json();
+  lastChanData = { chan, d };
+  renderDashboard(chan, d);
+}
+
+function switchTab(tab){
+  activeTab = tab;
+  renderDashboard(lastChanData.chan, lastChanData.d);
 }
 
 function renderDashboard(chan, d){
@@ -206,36 +247,158 @@ function renderDashboard(chan, d){
   main.innerHTML = `
     <div class="subcount">
       <img src="${d.thumb}">
-      <div><div class="num">${fmt(d.subs)}</div><div class="lbl">Total subscribers</div></div>
+      <div><div class="num">${fmt(d.subs)}</div><div class="lbl">Total subscribers · ${fmt(d.videoCount)} videos</div></div>
     </div>
+    <div class="tabbar">
+      <div class="tabbtn ${activeTab==='overview'?'active':''}" onclick="switchTab('overview')">Overview</div>
+      <div class="tabbtn ${activeTab==='audience'?'active':''}" onclick="switchTab('audience')">Audience</div>
+      <div class="tabbtn ${activeTab==='content'?'active':''}" onclick="switchTab('content')">Content</div>
+    </div>
+    <div id="tabBody"></div>
+    <div class="note" style="text-align:center;margin-top:16px;">Updated ${timeAgo(d.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
+  `;
+  const body = document.getElementById('tabBody');
+  if(activeTab==='overview') body.innerHTML = overviewHTML(d);
+  else if(activeTab==='audience') body.innerHTML = audienceHTML(d);
+  else body.innerHTML = contentHTML(d);
+
+  if(activeTab==='overview'){
+    drawBarChart(document.getElementById('dailyChart'), d.dailyViews.map(r=>Number(r[1])), d.dailyViews.map(r=>r[0]));
+  }
+  if(activeTab==='audience'){
+    fillBars('srcBox', d.trafficSources);
+    fillBars('devBox', d.devices);
+    fillBars('geoBox', d.countries);
+    fillBars('subBox', d.subscribedStatus.map(r=>[r[0]==='SUBSCRIBED'?'Subscribed':'Not subscribed', r[1]]));
+    fillDemo('demoBox', d.demographics);
+  }
+  if(activeTab==='content'){
+    const vl = document.getElementById('vidlist');
+    d.videos.forEach((v,i)=>{
+      const row = document.createElement('div');
+      row.className = 'vidrow';
+      row.innerHTML = `
+        <img src="${v.snippet.thumbnails.default.url}">
+        <div class="info">
+          <div class="title">${v.snippet.title}</div>
+          <div class="meta"><span>${fmt(v.statistics.viewCount)} views</span><span>·</span><span>${fmt(v.statistics.likeCount)} likes</span><span class="rank">#${v.rankByViews} of ${d.videos.length}</span></div>
+        </div>`;
+      row.onclick = ()=> openVideo(chan, v, d.videos);
+      vl.appendChild(row);
+    });
+    fillBars('playlistBox', d.playlists);
+  }
+}
+
+function overviewHTML(d){
+  return `
     <div class="grid2">
-      <div class="card"><div class="k">Lifetime views</div><div class="v">${fmt(d.totalViews)}</div></div>
+      <div class="card"><div class="k">Views (28d)</div><div class="v">${fmt(d.analytics.views)}</div></div>
+      <div class="card"><div class="k">Watch time (hrs)</div><div class="v">${fmt(d.analytics.estimatedMinutesWatched/60)}</div></div>
+      <div class="card"><div class="k">Subscribers gained</div><div class="v pos">+${fmt(d.analytics.subscribersGained)}</div></div>
+      <div class="card"><div class="k">Est. revenue</div><div class="v">$${fmt(d.analytics.estimatedRevenue)}</div></div>
+      <div class="card"><div class="k">Likes</div><div class="v">${fmt(d.analytics.likes)}</div></div>
+      <div class="card"><div class="k">Comments</div><div class="v">${fmt(d.analytics.comments)}</div></div>
+    </div>
+    <h2 class="section">Daily views <span class="hint">last 28 days</span></h2>
+    <div class="chartWrap"><svg id="dailyChart" class="barChart" viewBox="0 0 340 120" preserveAspectRatio="none"></svg></div>
+    <h2 class="section">Lifetime</h2>
+    <div class="grid2">
+      <div class="card"><div class="k">Total views</div><div class="v">${fmt(d.totalViews)}</div></div>
       <div class="card"><div class="k">Total videos</div><div class="v">${fmt(d.videoCount)}</div></div>
     </div>
-    <h2 class="section">Channel analytics <span style="color:var(--sub);font-weight:400;font-size:13px;">(last 28 days)</span></h2>
-    <div class="grid2">
-      <div class="card"><div class="k">Views</div><div class="v">${fmt(d.analytics.views)}</div></div>
-      <div class="card"><div class="k">Watch time (hrs)</div><div class="v">${fmt(d.analytics.estimatedMinutesWatched/60)}</div></div>
-      <div class="card"><div class="k">Subscribers</div><div class="v">+${fmt(d.analytics.subscribersGained)}</div></div>
-      <div class="card"><div class="k">Est. revenue</div><div class="v">$${fmt(d.analytics.estimatedRevenue)}</div></div>
-    </div>
-    <h2 class="section">Latest content</h2>
-    <div id="vidlist"></div>
-    <div class="note" style="text-align:center;margin-top:10px;">Updated ${timeAgo(d.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
   `;
-  const vl = document.getElementById('vidlist');
-  d.videos.forEach((v,i)=>{
-    const row = document.createElement('div');
-    row.className = 'vidrow';
-    row.innerHTML = `
-      <img src="${v.snippet.thumbnails.default.url}">
-      <div class="info">
-        <div class="title">${v.snippet.title}</div>
-        <div class="meta">${fmt(v.statistics.viewCount)} views &nbsp;·&nbsp; ${fmt(v.statistics.likeCount)} likes <span class="rank">Rank #${v.rankByViews} of ${d.videos.length} by views</span></div>
-      </div>`;
-    row.onclick = ()=> openVideo(chan, v, d.videos);
-    vl.appendChild(row);
+}
+
+function audienceHTML(d){
+  return `
+    <h2 class="section">Traffic sources</h2>
+    <div class="chartWrap" id="srcBox"></div>
+    <h2 class="section">Top countries</h2>
+    <div class="chartWrap" id="geoBox"></div>
+    <h2 class="section">Devices</h2>
+    <div class="chartWrap" id="devBox"></div>
+    <h2 class="section">Subscribed vs not</h2>
+    <div class="chartWrap" id="subBox"></div>
+    <h2 class="section">Age &amp; gender</h2>
+    <div class="chartWrap" id="demoBox"></div>
+  `;
+}
+
+function contentHTML(d){
+  return `
+    <div id="vidlist"></div>
+    <h2 class="section">Playlists by views</h2>
+    <div class="chartWrap" id="playlistBox"></div>
+  `;
+}
+
+function fillBars(elId, rows){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  if(!rows || !rows.length){ el.innerHTML = `<div class="note">Not enough data yet.</div>`; return; }
+  el.innerHTML = '';
+  const maxV = Math.max(1,...rows.map(s=>Number(s[1])));
+  rows.forEach(s=>{
+    const pct = (Number(s[1])/maxV*100).toFixed(0);
+    const div = document.createElement('div');
+    div.className = 'srcbar';
+    div.innerHTML = `<div class="row"><span class="lbl">${s[0]}</span><span class="val">${fmt(s[1])}</span></div><div class="bg"><div class="fg" style="width:0%"></div></div>`;
+    el.appendChild(div);
+    requestAnimationFrame(()=>{ div.querySelector('.fg').style.width = pct+'%'; });
   });
+}
+
+function fillDemo(elId, rows){
+  const el = document.getElementById(elId);
+  if(!rows || !rows.length){ el.innerHTML = `<div class="note">Not enough data yet.</div>`; return; }
+  const grouped = {};
+  rows.forEach(r=>{
+    const age = r[0], gender = r[1], pct = r[2];
+    grouped[age] = grouped[age] || {};
+    grouped[age][gender] = pct;
+  });
+  el.innerHTML = '';
+  Object.keys(grouped).forEach(age=>{
+    const male = grouped[age].MALE || 0, female = grouped[age].FEMALE || 0;
+    const div = document.createElement('div');
+    div.className = 'srcbar';
+    div.innerHTML = `<div class="row"><span class="lbl">${age.replace('age','')}</span><span class="val">M ${male.toFixed(1)}% · F ${female.toFixed(1)}%</span></div>
+      <div class="bg"><div class="fg" style="width:${(male+female).toFixed(0)}%"></div></div>`;
+    el.appendChild(div);
+  });
+}
+
+function drawBarChart(svg, data, labels){
+  if(!svg) return;
+  if(!data.length){ svg.parentElement.innerHTML = `<div class="note">Data not available yet.</div>`; return; }
+  const w=340,h=120,max=Math.max(...data,1),n=data.length,bw=w/n*0.6,gap=w/n;
+  let bars = data.map((v,i)=>{
+    const bh = (v/max)*(h-10);
+    const x = i*gap + (gap-bw)/2;
+    return `<rect x="${x}" y="${h-bh}" width="${bw}" height="0" rx="2" fill="url(#grad)"><animate attributeName="height" from="0" to="${bh}" dur="0.5s" fill="freeze"/><animate attributeName="y" from="${h}" to="${h-bh}" dur="0.5s" fill="freeze"/></rect>`;
+  }).join('');
+  svg.innerHTML = `<defs><linearGradient id="grad" x1="0" y1="1" x2="0" y2="0">
+    <stop offset="0%" stop-color="#22c1e0"/><stop offset="100%" stop-color="#5ee6ff"/>
+  </linearGradient></defs>${bars}`;
+}
+
+function drawLineChart(container, data){
+  if(!data.length){ container.innerHTML = `<div class="note">Data not available yet.</div>`; return; }
+  const w=340,h=150;
+  let cum=[],running=0;
+  data.forEach(v=>{running+=v;cum.push(running);});
+  const cmax = Math.max(...cum,1);
+  const pts = cum.map((v,i)=> `${(i/(cum.length-1||1))*w},${h-(v/cmax*h)}`).join(' ');
+  const areaPts = `0,${h} ${pts} ${w},${h}`;
+  container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22c1e0" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#22c1e0" stop-opacity="0"/>
+    </linearGradient></defs>
+    <polygon points="${areaPts}" fill="url(#areaGrad)"/>
+    <polyline points="${pts}" fill="none" stroke="#22c1e0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg><div class="note">Total: ${fmt(cum[cum.length-1])} views since published</div>`;
 }
 
 async function openVideo(chan, video, allVideos){
@@ -244,7 +407,7 @@ async function openVideo(chan, video, allVideos){
   currentView = 'video';
   currentVideoCtx = { chan, video, allVideos };
   const main = document.getElementById('main');
-  main.innerHTML = `<div class="spin"></div>`;
+  main.innerHTML = skeleton();
 
   const q = new URLSearchParams({ channelId: chan.id, videoId: video.id, publishedAt: video.snippet.publishedAt });
   const vd = await (await fetch('/api/video?'+q, {cache:'no-store'})).json();
@@ -253,9 +416,9 @@ async function openVideo(chan, video, allVideos){
 
   main.innerHTML = `
     <div style="display:flex;gap:12px;margin-bottom:16px;">
-      <img src="${video.snippet.thumbnails.medium.url}" style="width:100px;border-radius:8px;">
-      <div><div style="font-weight:600;font-size:14px;">${video.snippet.title}</div>
-      <div class="note">Rank #${rank} of ${allVideos.length} recent videos, by views</div>
+      <img src="${video.snippet.thumbnails.medium.url}" style="width:100px;border-radius:10px;">
+      <div><div style="font-weight:600;font-size:14px;line-height:1.35;">${video.snippet.title}</div>
+      <div class="note">Rank #${rank} of ${allVideos.length} recent videos</div>
       <div class="note">Published ${new Date(video.snippet.publishedAt).toLocaleDateString()}</div></div>
     </div>
     <h2 class="section">Overview</h2>
@@ -265,52 +428,23 @@ async function openVideo(chan, video, allVideos){
     <div class="statline"><span class="k">Watch time (hrs)</span><span class="v">${fmt((e.estimatedMinutesWatched||0)/60)}</span></div>
     <div class="statline"><span class="k">Avg view duration</span><span class="v">${fmtDuration(e.averageViewDuration)}</span></div>
     <div class="statline"><span class="k">Avg % viewed</span><span class="v">${e.averageViewPercentage ? e.averageViewPercentage.toFixed(1)+'%' : '—'}</span></div>
-    <div class="statline"><span class="k">Subscribers gained</span><span class="v">+${fmt(e.subscribersGained)}</span></div>
+    <div class="statline"><span class="k">Subscribers gained</span><span class="v pos" style="color:var(--green);">+${fmt(e.subscribersGained)}</span></div>
     <div class="statline"><span class="k">Shares</span><span class="v">${fmt(e.shares)}</span></div>
     <div class="statline"><span class="k">Est. revenue</span><span class="v">$${fmt(e.estimatedRevenue)}</span></div>
     <h2 class="section">Views since published</h2>
-    <div id="chart"></div>
+    <div class="chartWrap" id="chart"></div>
     <h2 class="section">Top sources</h2>
-    <div id="sources"></div>
+    <div class="chartWrap" id="sources"></div>
     <h2 class="section">Devices</h2>
-    <div id="devices"></div>
-    <div class="note" style="text-align:center;margin-top:10px;">Updated ${timeAgo(vd.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
+    <div class="chartWrap" id="devices"></div>
+    <h2 class="section">Top countries</h2>
+    <div class="chartWrap" id="countries"></div>
+    <div class="note" style="text-align:center;margin-top:14px;">Updated ${timeAgo(vd.fetchedAt)} · YouTube processes analytics with a 24–48h delay</div>
   `;
   drawLineChart(document.getElementById('chart'), vd.series.map(r=>Number(r[1])));
   fillBars('sources', vd.sources);
   fillBars('devices', vd.devices);
-}
-
-function fmtDuration(sec){
-  if(!sec) return '—';
-  sec = Math.round(sec);
-  const m = Math.floor(sec/60), s = sec%60;
-  return `${m}:${s.toString().padStart(2,'0')}`;
-}
-
-function fillBars(elId, rows){
-  const el = document.getElementById(elId);
-  if(!rows || !rows.length){ el.innerHTML = `<div class="note">Not enough data yet.</div>`; return; }
-  const maxV = Math.max(1,...rows.map(s=>Number(s[1])));
-  rows.forEach(s=>{
-    const pct = (Number(s[1])/maxV*100).toFixed(0);
-    const div = document.createElement('div');
-    div.className = 'srcbar';
-    div.innerHTML = `<div class="row"><span>${s[0]}</span><span>${fmt(s[1])}</span></div><div class="bg"><div class="fg" style="width:${pct}%"></div></div>`;
-    el.appendChild(div);
-  });
-}
-
-function drawLineChart(container, data){
-  if(!data.length){ container.innerHTML = `<div class="note">Data not available yet.</div>`; return; }
-  const w=340,h=160;
-  let cum=[],running=0;
-  data.forEach(v=>{running+=v;cum.push(running);});
-  const cmax = Math.max(...cum,1);
-  const pts = cum.map((v,i)=> `${(i/(cum.length-1||1))*w},${h-(v/cmax*h)}`).join(' ');
-  container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <polyline points="${pts}" fill="none" stroke="#22c1e0" stroke-width="2.5"/>
-  </svg><div class="note">Total: ${fmt(cum[cum.length-1])} views</div>`;
+  fillBars('countries', vd.countries);
 }
 </script>
 </body>
